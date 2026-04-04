@@ -6,13 +6,13 @@ RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
 COPY server/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir openenv-core fastapi uvicorn openai requests
 
 COPY . .
 
-RUN pip install --no-cache-dir openenv-core fastapi uvicorn openai requests
-
-EXPOSE 8000
-
 ENV PYTHONPATH="/app"
+ENV PORT=7860
 
-CMD ["uvicorn", "server.app:app", "--host", "0.0.0.0", "--port", "8000"]
+EXPOSE 7860
+
+CMD ["uvicorn", "server.app:app", "--host", "0.0.0.0", "--port", "7860"]
