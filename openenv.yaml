@@ -1,0 +1,22 @@
+spec_version: 1
+name: support_ticket_router
+type: space
+runtime: fastapi
+app: server.app:app
+port: 8000
+description: >
+  An OpenEnv environment where an AI agent reads customer support tickets
+  and routes them to the correct department with priority and resolution.
+tasks:
+  - task_id: task_easy
+    difficulty: easy
+    description: Route a billing complaint correctly
+  - task_id: task_medium
+    difficulty: medium
+    description: Route a technical issue with correct priority
+  - task_id: task_hard
+    difficulty: hard
+    description: Handle an ambiguous billing ticket
+reward:
+  min: 0.0
+  max: 1.0
