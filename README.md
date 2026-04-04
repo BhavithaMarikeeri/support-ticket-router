@@ -1,11 +1,12 @@
 ---
 title: Support Ticket Router
-emoji: 🔥
-colorFrom: purple
-colorTo: red
+emoji: 🎫
+colorFrom: blue
+colorTo: green
 sdk: docker
 pinned: false
 license: apache-2.0
 ---
 
-Check out the configuration reference at https://huggingface.co/docs/hub/spaces-config-reference
+# Customer Support Ticket Router
+An OpenEnv environment for routing customer support tickets.
