@@ -19,7 +19,16 @@ app = create_app(
     env_name="support_ticket_router",
     max_concurrent_envs=1,
 )
+from fastapi.responses import JSONResponse
 
+@app.get("/")
+async def root():
+    return JSONResponse({
+        "environment": "support-ticket-router",
+        "status": "ok",
+        "tasks": ["task_easy", "task_medium", "task_hard"],
+        "version": "1.0.0"
+    })
 def main(host: str = "0.0.0.0", port: int = 7860):
     import uvicorn
     uvicorn.run(app, host=host, port=port)
