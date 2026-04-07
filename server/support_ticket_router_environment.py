@@ -39,7 +39,6 @@ TASKS = [
         "resolution_keywords": ["technical team", "troubleshoot", "update", "restart", "reset", "fix", "cache", "clear", "device", "reinstall"]
     },
 ]
-
 def compute_reward(task: dict, action: SupportTicketRouterAction) -> float:
     score = 0.0
 
@@ -51,9 +50,15 @@ def compute_reward(task: dict, action: SupportTicketRouterAction) -> float:
 
     res = action.suggested_resolution.lower()
     matches = sum(1 for k in task["resolution_keywords"] if k in res)
-    score += min(0.3, matches * 0.1)
+    score += min(0.28, matches * 0.09)
+
+    # Ensure score is strictly between 0 and 1 (never 0.0 or 1.0)
+    score = max(0.01, min(0.99, score))
 
     return round(score, 2)
+ 
+
+     
 
 
 class SupportTicketRouterEnvironment(Environment):
