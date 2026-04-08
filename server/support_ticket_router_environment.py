@@ -40,7 +40,7 @@ TASKS = [
     },
 ]
 def compute_reward(task: dict, action: SupportTicketRouterAction) -> float:
-    score = 0
+    score = 0.0
 
     if action.category == task["correct_category"]:
         score += 0.4
@@ -52,10 +52,11 @@ def compute_reward(task: dict, action: SupportTicketRouterAction) -> float:
     matches = sum(1 for k in task["resolution_keywords"] if k in res)
     score += min(0.28, matches * 0.09)
 
-    # Ensure score is strictly between 0 and 1 (never 0.0 or 1.0)
-    score = max(0.01, min(0.99, score))
+    # STRICTLY between (0,1)
+    epsilon = 1e-6
+    score = max(epsilon, min(1 - epsilon, score))
 
-    return round(score, 2)
+    return float(score)   # ✅ NO ROUNDING
  
 
      
