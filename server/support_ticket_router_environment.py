@@ -40,7 +40,7 @@ TASKS = [
     },
 ]
 def compute_reward(task: dict, action: SupportTicketRouterAction) -> float:
-    score = 0.0
+    score = 0
 
     if action.category == task["correct_category"]:
         score += 0.4
