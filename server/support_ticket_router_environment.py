@@ -16,7 +16,7 @@ TASKS = [
         "message": "I was charged twice for my subscription this month. Please refund.",
         "correct_category": "Billing",
         "correct_priority": "high",
-        "resolution_keywords": ["refund", "billing team", "invoice", "payment", "charge"]
+        "resolution_keywords": ["refund", "billing", "invoice", "payment", "charge", "duplicate"]
     },
     {
         "task_id": "task_medium",
@@ -26,7 +26,7 @@ TASKS = [
         "message": "The mobile app crashes every time I open the settings page. Tried reinstalling but still broken.",
         "correct_category": "Technical",
         "correct_priority": "high",
-        "resolution_keywords": ["technical team", "troubleshoot", "update", "restart", "reset", "fix"]
+        "resolution_keywords": ["technical", "troubleshoot", "update", "restart", "reset", "fix", "crash", "bug"]
     },
     {
         "task_id": "task_hard",
@@ -36,30 +36,40 @@ TASKS = [
         "message": "I changed my plan last week but I'm not sure if the new price is correct. Also how do I download my invoice?",
         "correct_category": "Billing",
         "correct_priority": "medium",
-        "resolution_keywords": ["technical team", "troubleshoot", "update", "restart", "reset", "fix", "cache", "clear", "device", "reinstall"]
+        "resolution_keywords": ["invoice", "download", "plan", "price", "billing", "account", "subscription"]
     },
 ]
+
+TASK_MAP = {t["task_id"]: t for t in TASKS}
+
+
 def compute_reward(task: dict, action: SupportTicketRouterAction) -> float:
-    score = 0.0
+    """
+    Score is ALWAYS strictly inside (0.05, 0.95) — never 0.0 or 1.0.
+    Breakdown:
+      category match  → +0.33
+      priority match  → +0.28
+      keyword matches → up to +0.24 (0.06 each, max 4)
+      base            → +0.05  (guarantees > 0 even if all wrong)
+    Max possible = 0.05 + 0.33 + 0.28 + 0.24 = 0.90  → never reaches 1.0
+    Min possible = 0.05                                → never reaches 0.0
+    """
+    score = 0.05  # base — guarantees strictly > 0
 
     if action.category == task["correct_category"]:
-        score += 0.4
+        score += 0.33
 
     if action.priority == task["correct_priority"]:
-        score += 0.3
+        score += 0.28
 
     res = action.suggested_resolution.lower()
     matches = sum(1 for k in task["resolution_keywords"] if k in res)
-    score += min(0.28, matches * 0.09)
+    score += min(0.24, matches * 0.06)
 
-    # STRICTLY between (0,1)
-    epsilon = 1e-6
-    score = max(epsilon, min(1 - epsilon, score))
+    # Safety clamp — mathematically impossible to hit these but belt-and-suspenders
+    score = max(0.01, min(0.99, score))
 
-    return float(score)   # ✅ NO ROUNDING
- 
-
-     
+    return round(float(score), 4)
 
 
 class SupportTicketRouterEnvironment(Environment):
@@ -69,9 +79,13 @@ class SupportTicketRouterEnvironment(Environment):
         self._state = State(episode_id=str(uuid4()), step_count=0)
         self._current_task = TASKS[0]
 
-    def reset(self) -> SupportTicketRouterObservation:
+    def reset(self, task_id: str = None) -> SupportTicketRouterObservation:
         self._state = State(episode_id=str(uuid4()), step_count=0)
-        self._current_task = TASKS[0]
+
+        if task_id and task_id in TASK_MAP:
+            self._current_task = TASK_MAP[task_id]
+        else:
+            self._current_task = TASKS[0]
 
         return SupportTicketRouterObservation(
             ticket_id=self._current_task["ticket_id"],
@@ -79,7 +93,7 @@ class SupportTicketRouterEnvironment(Environment):
             message=self._current_task["message"],
             difficulty=self._current_task["difficulty"],
             done=False,
-            reward=0.0,
+            reward=0.5,
         )
 
     def step(self, action: SupportTicketRouterAction) -> SupportTicketRouterObservation:
