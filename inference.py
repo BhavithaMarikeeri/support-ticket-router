@@ -3,7 +3,6 @@ import json
 import requests
 from openai import OpenAI
 
-# ── Mandatory config variables ─────────────────────────────────────────────────
 API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
 MODEL_NAME   = os.getenv("MODEL_NAME",   "Qwen/Qwen2.5-72B-Instruct")
 HF_TOKEN     = os.getenv("HF_TOKEN",     "")
@@ -32,7 +31,6 @@ TASKS = [
 
 
 def safe_score(score) -> float:
-    """HARD guarantee: score is strictly inside (0, 1). Never 0.0 or 1.0."""
     try:
         s = float(score)
     except (TypeError, ValueError):
@@ -59,17 +57,17 @@ def agent_decide(message: str) -> dict:
 
 Customer message: "{message}"
 
-Classify the ticket. Respond with ONLY valid JSON, no markdown, no explanation:
+Respond with ONLY valid JSON, no markdown, no explanation:
 {{
   "category": "Billing",
   "priority": "high",
-  "suggested_resolution": "Route to billing team to investigate duplicate charge and issue refund"
+  "suggested_resolution": "Route to billing team to investigate the charge and process refund for the invoice"
 }}
 
 Rules:
 - category must be exactly one of: Billing, Technical, General
 - priority must be exactly one of: low, medium, high
-- suggested_resolution must be a descriptive sentence mentioning relevant action"""
+- suggested_resolution must mention relevant keywords"""
 
     response = client.chat.completions.create(
         model=MODEL_NAME,
@@ -78,7 +76,6 @@ Rules:
         temperature=0.1,
     )
     raw = response.choices[0].message.content.strip()
-    # Strip markdown fences if model adds them
     raw = raw.replace("```json", "").replace("```", "").strip()
     return json.loads(raw)
 
@@ -90,23 +87,17 @@ def run_task(task: dict) -> float:
     log_start(task=task_id, env="support_ticket_router", model=MODEL_NAME)
 
     try:
-        # Reset env for this task
         requests.post(f"{ENV_URL}/reset", timeout=30)
-
-        # Get agent decision
         action = agent_decide(task["ticket"]["message"])
         action_str = json.dumps(action)
 
-        # Step the environment
         step_resp = requests.post(
             f"{ENV_URL}/step",
             json={"action": action},
             timeout=30,
         )
         result = step_resp.json()
-
-        raw_reward = result.get("reward", 0.05)
-        reward = safe_score(raw_reward)
+        reward = safe_score(result.get("reward", 0.05))
         rewards.append(reward)
 
         log_step(step=1, action=action_str, reward=reward, done=True)
@@ -123,12 +114,10 @@ def run_task(task: dict) -> float:
 
 def run_all_tasks():
     all_scores = []
-
     for task in TASKS:
         score = run_task(task)
         all_scores.append(score)
         print()
-
     avg = round(sum(all_scores) / len(all_scores), 4)
     print(f"Average score: {avg}", flush=True)
 

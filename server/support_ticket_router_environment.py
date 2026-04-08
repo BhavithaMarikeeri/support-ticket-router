@@ -44,17 +44,9 @@ TASK_MAP = {t["task_id"]: t for t in TASKS}
 
 
 def compute_reward(task: dict, action: SupportTicketRouterAction) -> float:
-    """
-    Score is ALWAYS strictly inside (0.05, 0.95) — never 0.0 or 1.0.
-    Breakdown:
-      category match  → +0.33
-      priority match  → +0.28
-      keyword matches → up to +0.24 (0.06 each, max 4)
-      base            → +0.05  (guarantees > 0 even if all wrong)
-    Max possible = 0.05 + 0.33 + 0.28 + 0.24 = 0.90  → never reaches 1.0
-    Min possible = 0.05                                → never reaches 0.0
-    """
-    score = 0.05  # base — guarantees strictly > 0
+    # Base 0.05 guarantees score is NEVER 0.0
+    # Max = 0.05 + 0.33 + 0.28 + 0.24 = 0.90, so NEVER reaches 1.0
+    score = 0.05
 
     if action.category == task["correct_category"]:
         score += 0.33
@@ -66,7 +58,7 @@ def compute_reward(task: dict, action: SupportTicketRouterAction) -> float:
     matches = sum(1 for k in task["resolution_keywords"] if k in res)
     score += min(0.24, matches * 0.06)
 
-    # Safety clamp — mathematically impossible to hit these but belt-and-suspenders
+    # Hard safety clamp — score always strictly inside (0, 1)
     score = max(0.01, min(0.99, score))
 
     return round(float(score), 4)
@@ -81,7 +73,6 @@ class SupportTicketRouterEnvironment(Environment):
 
     def reset(self, task_id: str = None) -> SupportTicketRouterObservation:
         self._state = State(episode_id=str(uuid4()), step_count=0)
-
         if task_id and task_id in TASK_MAP:
             self._current_task = TASK_MAP[task_id]
         else:
